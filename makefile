@@ -17,11 +17,13 @@ outDebug = bin\ecsd.exe
 outRelease = bin\ecs.exe
 
 preDefinesDebug = _DEBUG
-preDefinesRelease =  
+preDefinesRelease = 
+
+cppStd = 23
 
 #-----------------------------------------------------------------------
 
-CC = g++
+CC = ccache g++ -std=c++$(strip $(cppStd))
 
 empty = 
 

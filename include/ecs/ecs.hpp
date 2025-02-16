@@ -20,7 +20,7 @@ private :
     // Stores components and which entities possess them
     // Note : I thought of having a separate container to associate entity IDs with components, with
     // std::unordered_map<EntityId, std::unordered_map<ComponentType, ComponentBase*>>. Like this,
-    // we can remove an entity in constant time (see current implementation of entity removal below). 
+    // we can remove an entity in constant time (see current implementation of entity removal in ecs.cpp). 
     // But this would lead to tons of unordered maps since we can have tons of entities. I thought that'd be inefficient
     // compared to having one entity-to-component map per component type and having linear time entity removal
     // (linear in number of component types, which is not too bad). Do comment on this! Also, PoolAllocator 
@@ -45,7 +45,7 @@ private :
     
     // For handling creation and deletion of entities
     EntityId _nextEntityId {0};
-    std::unordered_set<EntityId> deletedIds{};
+    std::unordered_set<EntityId> _deletedIds{};
 
     template <typename ComponentType>
     _ComponentDatabase& _getOrCreateDatabase()
@@ -67,19 +67,12 @@ public :
     EntityId newEntity();
 
     bool entityExists(EntityId id);
-
-    template <typename ComponentType>
+    
+    template <typename... ComponentTypes>
     bool entityHasComponents(EntityId id)
     {
-        _ComponentDatabase& database {_getOrCreateDatabase<ComponentType>()};
-        return database.entityComponentPairs.contains(id);
-    }
-
-    // Uses recursion through variadic template arguments
-    template <typename ComponentType1, typename... ComponentType2s>
-    bool entityHasComponents(EntityId id)
-    {
-        return entityHasComponents<ComponentType1>(id) ? entityHasComponents<ComponentType2s...>(id) : false;
+        _idExistsOrThrow(id);
+        return (_getOrCreateDatabase<ComponentTypes>().entityComponentPairs.contains(id) && ...);
     }
 
     template <typename ComponentType, typename... CtorArgTypes>
@@ -92,9 +85,10 @@ public :
             return false;
         }
 
+        _ComponentDatabase& database {_getOrCreateDatabase<ComponentType>()};
         ComponentBase* newComponentBasePtr {(ComponentBase*)database.componentPool.allocate()};
+        
         new (newComponentBasePtr) ComponentWrapper<ComponentType> {std::forward<CtorArgTypes>(ctorArgs)...};
-
         database.entityComponentPairs.try_emplace(id, newComponentBasePtr);
 
         return true;
@@ -110,6 +104,7 @@ public :
             throw std::invalid_argument {"This entity does not have the requested component."};
         }
 
+        _ComponentDatabase& database {_getOrCreateDatabase<ComponentType>()};
         return ((ComponentWrapper<ComponentType>*)database.entityComponentPairs[id])->component;
     }
 

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <utility>
-#include "../include/pool_allocator.hpp"
+#include <ecs/ecs.hpp>
 
 struct Subject
 {
@@ -13,7 +13,7 @@ struct Subject
 
     Subject(int x) : dummy{x}
     {
-        printf("Subject was constructed with args.\n");
+        printf("Subject was constructed with arg %d\n", x);
     }
 
     Subject(const Subject& other) : dummy{other.dummy}
@@ -29,37 +29,25 @@ struct Subject
 
     ~Subject()
     {
-        printf("Subject was destroyed.\n");
+        printf("Subject %d was destroyed.\n", dummy);
     }
 };
 
 int main()
 {
-    using std::byte;
+    using EntityId = unsigned long long;
 
-    PoolAllocator alloc {sizeof(Subject), 10};
+    ECS ecs {10};
+    EntityId id {ecs.newEntity()};
+    printf("Created entity %d.\n", id);
 
-    Subject* newSubj = (Subject*)alloc.allocate();
-    new (newSubj) Subject {0};
+    ecs.addComponent<Subject>(id, 1);
+    
+    Subject& subj {ecs.getComponent<Subject>(id)};
+    subj.dummy = 10;
 
-    for(int _ = 1; _ < 10; _++)
-    {
-        Subject* newSubj_ = (Subject*)alloc.allocate();
-        new (newSubj_) Subject {_};
-    }
+    ecs.removeComponent<Subject>(id);
 
-    for(Subject* subj = newSubj; subj < (newSubj + 10); subj++)
-    {
-        printf("%d\n", subj->dummy);
-    }
-
-    alloc.deallocate((byte*)(newSubj + 4));
-    alloc.deallocate((byte*)(newSubj + 6));
-    new ((Subject*)alloc.allocate()) Subject {100};
-    new ((Subject*)alloc.allocate()) Subject {200};
-
-    for(Subject* subj = newSubj; subj < (newSubj + 10); subj++)
-    {
-        printf("%d\n", subj->dummy);
-    }
+    printf("End of main.\n");
+    return 0;
 }

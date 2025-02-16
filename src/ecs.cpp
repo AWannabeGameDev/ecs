@@ -31,22 +31,22 @@ ECS::~ECS()
 ECS::EntityId ECS::newEntity()
 {
     // Reuse a deleted ID if available
-    if(deletedIds.size() != 0)
+    if(_deletedIds.size() != 0)
     {
-        auto beginIter {deletedIds.begin()};
+        auto beginIter {_deletedIds.begin()};
         EntityId newId {*beginIter};
-        deletedIds.erase(beginIter);
+        _deletedIds.erase(beginIter);
         return newId;
     }
     else
     {
-        return {_nextEntityId++};
+        return _nextEntityId++;
     }
 }
 
 bool ECS::entityExists(EntityId id)
 {
-    return (id < _nextEntityId) && (not deletedIds.contains(id));
+    return (id < _nextEntityId) && (not _deletedIds.contains(id));
 }
 
 bool ECS::removeEntity(EntityId id)
@@ -71,5 +71,7 @@ bool ECS::removeEntity(EntityId id)
         }
     }
 
-    deletedIds.emplace(id);
+    _deletedIds.emplace(id);
+
+    return true;
 }
